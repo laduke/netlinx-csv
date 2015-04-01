@@ -1,3 +1,8 @@
+# AMX files
+*.src
+*.tkn
+*.tko
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
