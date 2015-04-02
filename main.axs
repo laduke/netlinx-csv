@@ -19,6 +19,34 @@ DEFINE_FUNCTION INTEGER fnLoadCSVMock(CHAR str[])
     str = "'one,1,1,1',13,10,'2,two,2,2',13,',3,3,"three",',10,'4,4,4,"fo,ur",'"
 }
 
+DEFINE_FUNCTION INTEGER fnConsumerConsumeField(_Tokenizer Vars)
+{
+    fnDEBUG2(__FILE__, DEBUG, nDebugCSV, "'    fnConsumerConsumeField ', ITOA(Vars.nNumFields), ' -- ', Vars.cFieldValue")
+} 
+
+DEFINE_FUNCTION INTEGER fnConsumerEndOfRecord(_Tokenizer Vars) 
+{
+    STACK_VAR INTEGER nLoop
+    STACK_VAR CHAR cMsg[MAX_CHARS * MAX_COLS]
+    
+    fnDEBUG2(__FILE__, DEBUG, nDebugCSV, "'  fnConsumerEndOfRecord ', ITOA(Vars.nNumRows)")
+    
+    FOR(nLoop = 1; nLoop <= Vars.nNumFieldsLastRecord; nLoop++)
+    {
+	cMsg = "cMsg,'"', Vars.c_Record[nLoop],'" '"
+    }
+    IF(LENGTH_STRING(cMsg) > 1)
+    {
+	fnDEBUG2(__FILE__, INFO, nDebugCSV, "'    [',cMsg,']'")
+    }
+
+} 
+
+DEFINE_FUNCTION INTEGER fnConsumerEndOfFile(_Tokenizer Vars) 
+{
+    fnDEBUG2(__FILE__, DEBUG, nDebugCSV, "'fnConsumerEndOfFile '")
+} 
+
 DEFINE_START
 fnLoadCSVMock(str_csv_mock)
 
@@ -52,9 +80,25 @@ CHANNEL_EVENT[vdvModule,0]
 		
 		WHILE(cResult && (cResult <> EOF))
 		{
-		    fnDEBUG(vdvModule, TRACE, nDebugCSV, "'cResult ', cResult")
+		    //fnDEBUG(vdvModule, TRACE, nDebugCSV, "'cResult ', cResult")
 		    
 		    fnParseCSVRecord(_tokenizer1)
+		    		    
+		    SWITCH(_tokenizer1.nFlag)
+		    {
+			CASE CNSMR_CONSUME_FIELD:
+			{
+			   fnConsumerConsumeField(_tokenizer1)
+			}
+			CASE CNSMR_END_OF_RECORD:
+			{
+			   fnConsumerEndOfRecord(_tokenizer1)
+			}
+			CASE CNSMR_EOF:
+			{
+			    fnConsumerEndOfFile(_tokenizer1)
+			}
+		    }
 		    
 		    cResult = fnTokenizer(_tokenizer1, TKN_PEEK)
 		}

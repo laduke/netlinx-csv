@@ -144,9 +144,10 @@
 <FilePathName>main.axs</FilePathName>
 <Comments></Comments>
 </File>
-<File CompileType="Netlinx" Type="Module"><Identifier>mdl-csv</Identifier>
-<FilePathName>mdl-csv.axs</FilePathName>
+<File CompileType="Netlinx" Type="Other"><Identifier>README</Identifier>
+<FilePathName>README.txt</FilePathName>
 <Comments></Comments>
+<MasterDirectory>\</MasterDirectory>
 </File>
 </System>
 <System IsActive="false" Platform="Netlinx" Transport="TCPIP" TransportEx="TCPIP"><Identifier>Testing2</Identifier>

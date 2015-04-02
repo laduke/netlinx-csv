@@ -34,6 +34,10 @@ STRUCTURE _Tokenizer
     INTEGER nNumFields
     INTEGER nNumRows
     CHAR cFieldValue[MAX_CHARS]
+    CHAR c_Record[MAX_COLS][MAX_CHARS]
+    
+    INTEGER nFlag
+    INTEGER nNumFieldsLastRecord
 }
 
 DEFINE_VARIABLE
@@ -51,6 +55,8 @@ DEFINE_FUNCTION CHAR fnTokenizer(_Tokenizer Vars, INTEGER nAction)
 	}
 	CASE TKN_PEEK:
 	{
+	    Vars.nFlag = 0
+	    
 	    IF(Vars.bHaveUnreadChar)
 	    {
 		Vars.ch = Vars.cUnreadChar;
@@ -288,6 +294,7 @@ DEFINE_FUNCTION CHAR mapCrToLf(char c)
 
 DEFINE_FUNCTION INTEGER fnConsumer(_Tokenizer Vars, INTEGER nMethod)
 {
+    Vars.nFlag = nMethod
     SWITCH(nMethod)
     {
 	CASE CNSMR_INIT: 
@@ -298,34 +305,18 @@ DEFINE_FUNCTION INTEGER fnConsumer(_Tokenizer Vars, INTEGER nMethod)
 	CASE CNSMR_CONSUME_FIELD:
 	{
 	    Vars.nNumFields++
-	    fnConsumerConsumeField(Vars)
-	    Vars.cFieldValue = ''
+	    Vars.c_Record[Vars.nNumFields] = Vars.cFieldValue
+	    //Vars.cFieldValue = ''
 	}
 	CASE CNSMR_END_OF_RECORD:
 	{
 	    Vars.nNumRows++
-	    fnConsumerEndOfRecord(Vars)
+	    Vars.nNumFieldsLastRecord = Vars.nNumFields
 	    Vars.nNumFields=0
 	}
 	CASE CNSMR_EOF:
 	{
-	    fnConsumerEndOfFile(Vars)
-	    fnConsumer(Vars,CNSMR_EOF)
+	    fnConsumer(Vars, CNSMR_INIT)
 	}
     }
 }
-
-DEFINE_FUNCTION INTEGER fnConsumerConsumeField(_Tokenizer Vars)
-{
-    fnDEBUG2(__FILE__, DEBUG, nDebugCSV, "'    fnConsumerConsumeField ', ITOA(Vars.nNumFields), ' -- ', Vars.cFieldValue")
-} 
-
-DEFINE_FUNCTION INTEGER fnConsumerEndOfRecord(_Tokenizer Vars) 
-{
-    fnDEBUG2(__FILE__, DEBUG, nDebugCSV, "'  fnConsumerEndOfRecord ', ITOA(Vars.nNumRows)")
-} 
-
-DEFINE_FUNCTION INTEGER fnConsumerEndOfFile(_Tokenizer Vars) 
-{
-    fnDEBUG2(__FILE__, DEBUG, nDebugCSV, "'fnConsumerEndOfFile '")
-} 
