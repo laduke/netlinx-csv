@@ -1,9 +1,5 @@
 PROGRAM_NAME='inc-csv'
 
-DEFINE_CONSTANT
-#IF_NOT_DEFINED CDG_LIB
-  #INCLUDE'cdg-lib'
-#END_IF
 
 DEFINE_CONSTANT
 INTEGER MAX_COLS = 26
@@ -40,8 +36,6 @@ STRUCTURE _Tokenizer
     INTEGER nNumFieldsLastRecord
 }
 
-DEFINE_VARIABLE
-VOLATILE nDebugCSV
 
 DEFINE_FUNCTION CHAR fnTokenizer(_Tokenizer Vars, INTEGER nAction)
 {
