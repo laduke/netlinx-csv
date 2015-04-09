@@ -20,8 +20,10 @@ DEFINE_VARIABLE
 _Tokenizer _tokenizer1
 
 DEFINE_VARIABLE
-CHAR str_csv_mock[1024]
-INTEGER nDebugCSV
+VOLATILE INTEGER nDebugCSV = 6
+VOLATILE CHAR sPath[64] = 'csv/big.csv'
+VOLATILE CHAR sBuffer[256]
+VOLATILE INTEGER nBufferChunkSize = 64
 
 
 DEFINE_FUNCTION CHAR[15] fnDEVTOA (DEV dvDev)					//Convert DEV to ASCII for sending between modules without declarations
@@ -44,10 +46,24 @@ DEFINE_FUNCTION INTEGER fnDEBUG (DEV dv, INTEGER debug_level,INTEGER  msg_level,
 	SEND_STRING 0, "fnDEVTOA(dv), ' -- [', ITOA(msg_level), '] ',sPadding, msg"
     }
 }
-
 DEFINE_FUNCTION INTEGER fnLoadCSVMock(CHAR str[])
 {
-    str = "'one,1,1,1',13,10,'2,two,2,2',13,',3,3,"three",',10,'4,4,4,"fo,ur",'"
+    str = "'"o n e",1,1,1',13,10,'2,t wo,2,2',13,',3,3,"thr ee",',10,'4,4,4,"fo,ur",'"
+}
+
+DEFINE_FUNCTION INTEGER fnLoadCSVFile(CHAR sPath[], CHAR _sBuffer[])
+{
+    STACK_VAR SLONG slHandle
+    STACK_VAR SLONG slBytesRead
+    
+    slHandle = FILE_OPEN(sPath, 1)
+
+    IF(slHandle)
+    {
+	slBytesRead = FILE_READ(slHandle, _sBuffer, MAX_LENGTH_ARRAY(_sBuffer))
+    }
+    
+    SET_LENGTH_ARRAY(sBuffer, TYPE_CAST(slBytesRead))
 }
 
 DEFINE_FUNCTION INTEGER fnConsumerConsumeField(_Tokenizer Vars)
@@ -68,7 +84,7 @@ DEFINE_FUNCTION INTEGER fnConsumerEndOfRecord(_Tokenizer Vars)
     }
     IF(LENGTH_STRING(cMsg) > 1)
     {
-	fnDebug(vdvCSVModule, INFO, nDebugCSV, "'[',cMsg,']'")
+	fnDebug(vdvCSVModule, INFO, nDebugCSV, "'[',ITOA(Vars.nNumRows),'][',cMsg,']'")
     }
 
 } 
@@ -78,8 +94,76 @@ DEFINE_FUNCTION INTEGER fnConsumerEndOfFile(_Tokenizer Vars)
     fnDebug(vdvCSVModule, DEBUG, nDebugCSV, "'fnConsumerEndOfFile '")
 } 
 
+DEFINE_FUNCTION INTEGER fnReadCSVFile(_Tokenizer Vars1, CHAR sPath[], CHAR _sBuffer[])
+{
+    STACK_VAR CHAR cResult
+    STACK_VAR SLONG slHandle
+    STACK_VAR SLONG slBytesRead
+    
+    slHandle = FILE_OPEN(sPath, 1) //Read Only
+
+    IF(slHandle)
+    {
+	slBytesRead = FILE_READ(slHandle, _sBuffer, nBufferChunkSize)
+    }
+    
+    IF(slBytesRead >= 0 )
+    {
+	//great
+    } ELSE 
+    {
+	fnDEBUG(vdvModule, ERROR, nDebugCSV, "'something wrong'")
+	RETURN 0
+    }
+    
+    Vars1.s = _sBuffer
+    
+    fnTokenizer(Vars1, TKN_INIT)
+    
+    cResult = fnTokenizer(Vars1, TKN_PEEK)
+    
+    WHILE(cResult && (cResult <> EOF))
+    {
+	//fnDEBUG(vdvModule, TRACE, nDebugCSV, "'cResult ', cResult")
+	
+	fnParseCSVRecord(Vars1)
+			
+	SWITCH(Vars1.nFlag)
+	{
+	    CASE CNSMR_CONSUME_FIELD:
+	    {
+		STACK_VAR INTEGER nRoomInBuffer
+		STACK_VAR INTEGER nChunkSizeToUse
+		fnConsumerConsumeField(Vars1)
+	       
+		nRoomInBuffer = MAX_LENGTH_STRING(Vars1.s) - LENGTH_STRING(Vars1.s)
+		
+		nChunkSizeToUse = nRoomInBuffer
+		IF(nRoomInBuffer > nBufferChunkSize)
+		{
+		    nChunkSizeToUse = nBufferChunkSize
+		}
+		
+		fnDEBUG(vdvModule, TRACE, nDebugCSV, "'End Field. RIB: ',ITOA(nRoomInBuffer),' CSTU: ',ITOA(nChunkSizeToUse)")
+		slBytesRead = FILE_READ(slHandle, _sBuffer, nChunkSizeToUse)
+	    }
+	    CASE CNSMR_END_OF_RECORD:
+	    {
+		fnConsumerEndOfRecord(Vars1)
+	    }
+	    CASE CNSMR_EOF:
+	    {
+		fnConsumerEndOfFile(Vars1)
+		
+	    }
+	}
+	Vars1.s = "Vars1.s,_sBuffer"
+	cResult = fnTokenizer(Vars1, TKN_PEEK)
+    }
+    fnConsumer(Vars1, CNSMR_EOF);
+}
 DEFINE_START
-fnLoadCSVMock(str_csv_mock)
+fnLoadCSVMock(sBuffer)
 
 DEFINE_EVENT
 CHANNEL_EVENT[vdvModule,0]
@@ -87,53 +171,21 @@ CHANNEL_EVENT[vdvModule,0]
     ON:
     {
 	STACK_VAR INTEGER nLengthLine
-	STACK_VAR CHAR sReturn[256]
 	
 	SWITCH(CHANNEL.CHANNEL)
 	{
-	    CASE 1: {fnLoadCSVMock(str_csv_mock)}
+	    CASE 1: {fnLoadCSVMock(sBuffer)}
 	    CASE 2:
-	    {
-
+	    {	
+		fnLoadCSVFile(sPath, sBuffer)
 	    }
 	    CASE 3:
 	    {
 		STACK_VAR CHAR cResult
 		
-		fnLoadCSVMock(str_csv_mock)
+		fnDEBUG(vdvModule, INFO, nDebugCSV, "'Read CSV File'")
 		
-		fnDEBUG(vdvModule, DEBUG, nDebugCSV, "'fnTokenizer init'")
-		
-		_tokenizer1.s = str_csv_mock
-		fnTokenizer(_tokenizer1, TKN_INIT)
-		
-		cResult = fnTokenizer(_tokenizer1, TKN_PEEK)
-		
-		WHILE(cResult && (cResult <> EOF))
-		{
-		    //fnDEBUG(vdvModule, TRACE, nDebugCSV, "'cResult ', cResult")
-		    
-		    fnParseCSVRecord(_tokenizer1)
-		    		    
-		    SWITCH(_tokenizer1.nFlag)
-		    {
-			CASE CNSMR_CONSUME_FIELD:
-			{
-			   fnConsumerConsumeField(_tokenizer1)
-			}
-			CASE CNSMR_END_OF_RECORD:
-			{
-			   fnConsumerEndOfRecord(_tokenizer1)
-			}
-			CASE CNSMR_EOF:
-			{
-			    fnConsumerEndOfFile(_tokenizer1)
-			}
-		    }
-		    
-		    cResult = fnTokenizer(_tokenizer1, TKN_PEEK)
-		}
-		fnConsumer(_tokenizer1, CNSMR_EOF);
+		fnReadCSVFile(_tokenizer1, sPath, sBuffer)
 	    }
 	}
     }

@@ -3,7 +3,7 @@ PROGRAM_NAME='inc-csv'
 
 DEFINE_CONSTANT
 INTEGER MAX_COLS = 26
-INTEGER MAX_CHARS = 255
+INTEGER MAX_CHARS = 1024
 CHAR EOF = 255
 
 INTEGER TKN_INIT = 1
@@ -24,7 +24,7 @@ STRUCTURE _Tokenizer
     INTEGER bHaveUnreadChar
     CHAR cUnreadChar
     CHAR c
-    char ch
+    CHAR ch
     
     //consumer
     INTEGER nNumFields
@@ -140,7 +140,7 @@ DEFINE_FUNCTION INTEGER isFieldTerminator(char c) {
 }
 
 DEFINE_FUNCTION INTEGER isSpace(char c) {
-  return ((c == ' ') || (c == '\t'));
+  return ( (c == "$20") || (c == "$09") ); //space or tab
 }
 
 DEFINE_FUNCTION INTEGER parseOptionalSpaces(_Tokenizer Vars) {
@@ -155,10 +155,12 @@ DEFINE_FUNCTION INTEGER parseOptionalSpaces(_Tokenizer Vars) {
 }
 
 DEFINE_FUNCTION INTEGER parseRawString(_Tokenizer Vars) {
-  parseOptionalSpaces(Vars);
-  parseRawField(Vars);
-  if (!isFieldTerminator(fnTokenizer(Vars, tkn_peek)))
     parseOptionalSpaces(Vars);
+    parseRawField(Vars);
+    if (!isFieldTerminator(fnTokenizer(Vars, TKN_PEEK)))
+    {
+	parseOptionalSpaces(Vars);
+    }
 }
 
 DEFINE_FUNCTION INTEGER parseRawField(_Tokenizer Vars) {
@@ -167,7 +169,7 @@ DEFINE_FUNCTION INTEGER parseRawField(_Tokenizer Vars) {
     
     ch = fnTokenizer(Vars,TKN_PEEK);
     if (!isFieldTerminator(ch)) {
-	if (ch == '"')
+	if (ch == "$22") // double quote "
 	{
 	    fieldValue = parseQuotedField(Vars);
 	}
@@ -232,7 +234,7 @@ DEFINE_FUNCTION INTEGER parseSubField(_Tokenizer Vars, CHAR sb[]) {
 }
 
 DEFINE_FUNCTION INTEGER isBadSimpleFieldChar(char c) {
-  return isSpace(c) || isFieldTerminator(c) || (c == '"');
+  return ( /*isSpace(c) ||*/ isFieldTerminator(c) || (c == "$22") );
 }
 
 DEFINE_FUNCTION CHAR[MAX_CHARS] parseSimpleField(_Tokenizer Vars) {
@@ -249,12 +251,12 @@ DEFINE_FUNCTION CHAR[MAX_CHARS] parseSimpleField(_Tokenizer Vars) {
   }
 
   sb = "sb, ch"
-  ch = fnTokenizer(Vars, TKN_READ);
   
-  while (!isBadSimpleFieldChar(ch)) {
-    sb = "sb, ch"
     ch = fnTokenizer(Vars, TKN_READ);
-  }
+    while (!isBadSimpleFieldChar(ch)) {
+	sb = "sb, ch"
+	ch = fnTokenizer(Vars, TKN_READ);
+    }
   
     Vars.c = ch
     fnTokenizer(Vars, TKN_UNREAD);
@@ -264,7 +266,7 @@ DEFINE_FUNCTION CHAR[MAX_CHARS] parseSimpleField(_Tokenizer Vars) {
 
 DEFINE_FUNCTION INTEGER processDoubleQuote(_Tokenizer Vars, char ch) {
   
-  if ((ch == '"') && (fnTokenizer(Vars,TKN_PEEK) == '"')) {
+  if ((ch == "$22") && (fnTokenizer(Vars,TKN_PEEK) == "$22")) {
     fnTokenizer(Vars, TKN_READ); // discard second quote of double
     return true;
   }
