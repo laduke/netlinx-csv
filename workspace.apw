@@ -122,10 +122,10 @@
 <PurchaseOrder></PurchaseOrder>
 <Comments></Comments>
 <System IsActive="true" Platform="Netlinx" Transport="TCPIP" TransportEx="TCPIP"><Identifier>Testing1</Identifier>
-<SysID>1</SysID>
+<SysID>0</SysID>
 <TransTCPIP>10.10.0.32:1319:1:Printer Room 2::</TransTCPIP>
 <TransSerial>COM4,38400,8,None,1,None</TransSerial>
-<TransTCPIPEx>10.10.0.31|1319|1|cantara 1||</TransTCPIPEx>
+<TransTCPIPEx>10.10.0.33|1319|1|amx-sys-3||</TransTCPIPEx>
 <TransSerialEx>COM4|38400|8|None|1|None||</TransSerialEx>
 <TransUSBEx>|||||</TransUSBEx>
 <TransVNMEx>10.0.0.1|1|&lt;Default&gt;</TransVNMEx>
