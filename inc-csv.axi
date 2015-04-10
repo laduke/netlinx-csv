@@ -44,7 +44,7 @@ DEFINE_FUNCTION CHAR fnTokenizer(_Tokenizer Vars, INTEGER nAction)
     {
 	CASE TKN_INIT: 
 	{ 
-	    Vars.nIndex = 0
+	    Vars.nIndex = 1
 	    Vars.bHaveUnreadChar = FALSE
 	}
 	CASE TKN_PEEK:
@@ -73,16 +73,17 @@ DEFINE_FUNCTION CHAR fnTokenizer(_Tokenizer Vars, INTEGER nAction)
 		
 		return Vars.ch
 	    }
-	    IF(Vars.nIndex <= LENGTH_STRING(Vars.s))
+	    IF(Vars.nIndex < LENGTH_STRING(Vars.s))
 	    {//skipCrInCrLf
-		if ( (Vars.s[Vars.nIndex+1] == 13) && 
-		    (Vars.nIndex+1 <= LENGTH_STRING(Vars.s) ) && 
-		    (Vars.s[Vars.nIndex+1] == 10) ) 
+		if ((Vars.s[Vars.nIndex] == 13) && 
+		    (Vars.nIndex+1 < LENGTH_STRING(Vars.s) ) && 
+		    (Vars.s[Vars.nIndex+1] == 10) )
 		{ 
-		    Vars.nIndex++ 
+		    Vars.nIndex = Vars.nIndex + 1
 		}
-		Vars.nIndex++
+		
 		Vars.ch =  mapCrToLf(Vars.s[Vars.nIndex]);
+		Vars.nIndex = Vars.nIndex + 1
 		
 		RETURN Vars.ch
 	    }
@@ -274,7 +275,7 @@ DEFINE_FUNCTION INTEGER processDoubleQuote(_Tokenizer Vars, char ch) {
 }
 DEFINE_FUNCTION CHAR mapCrToLf(char c)
 {
-    if (c == 13)
+    if (c == "13")
 	return 10;
     
     return c;
