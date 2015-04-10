@@ -22,8 +22,8 @@ _Tokenizer _tokenizer1
 DEFINE_VARIABLE
 VOLATILE INTEGER nDebugCSV = 6
 VOLATILE CHAR sPath[64] = 'csv/big.csv'
-VOLATILE CHAR sBuffer[256]
-VOLATILE INTEGER nBufferChunkSize = 512
+VOLATILE CHAR sBuffer[MAX_CHARS*2]
+VOLATILE INTEGER nBufferChunkSize = MAX_CHARS*MAX_COLS
 
 
 DEFINE_FUNCTION CHAR[15] fnDEVTOA (DEV dvDev)					//Convert DEV to ASCII for sending between modules without declarations
@@ -74,7 +74,7 @@ DEFINE_FUNCTION INTEGER fnConsumerConsumeField(_Tokenizer Vars)
 DEFINE_FUNCTION INTEGER fnConsumerEndOfRecord(_Tokenizer Vars) 
 {
     STACK_VAR INTEGER nLoop
-    STACK_VAR CHAR cMsg[MAX_CHARS * MAX_COLS]
+    STACK_VAR CHAR cMsg[MAX_CHARS*MAX_COLS]
     
     fnDebug(vdvCSVModule, DEBUG, nDebugCSV, "'fnConsumerEndOfRecord ', ITOA(Vars.nNumRows)")
     
@@ -104,7 +104,7 @@ DEFINE_FUNCTION INTEGER fnReadCSVFile(_Tokenizer Vars1, CHAR sPath[], CHAR _sBuf
 
     IF(slHandle)
     {
-	slBytesRead = FILE_READ(slHandle, _sBuffer, nBufferChunkSize)
+	slBytesRead = FILE_READ(slHandle, Vars1.s, nBufferChunkSize)
     }
     
     IF(slBytesRead >= 0 )
@@ -116,30 +116,20 @@ DEFINE_FUNCTION INTEGER fnReadCSVFile(_Tokenizer Vars1, CHAR sPath[], CHAR _sBuf
 	RETURN 0
     }
     
-    Vars1.s = _sBuffer
-    fnTokenizer(Vars1, TKN_INIT)
+    FILE_CLOSE(slHandle)
     
+    fnTokenizer(Vars1, TKN_INIT)
+
     cResult = fnTokenizer(Vars1, TKN_PEEK)
     WHILE(/*cResult &&*/ (cResult <> EOF))
     {
-	
-	
 	fnParseCSVRecord(Vars1)
-	
 	fnConsumerEndOfRecord(Vars1)		
-	
-	slBytesRead = FILE_READ(slHandle, _sBuffer, nBufferChunkSize)
-	
-	fnDEBUG(vdvModule, TRACE, nDebugCSV, "'Buffer ', Vars1.s ")
-	fnDEBUG(vdvModule, TRACE, nDebugCSV, "'Add to Buffer ', _sBuffer")
-	
-	Vars1.s = "Vars1.s,_sBuffer"
-	
 	cResult = fnTokenizer(Vars1, TKN_PEEK)
     }
     fnConsumer(Vars1, CNSMR_EOF);
-    FILE_CLOSE(slHandle)
 }
+
 DEFINE_START
 fnLoadCSVMock(sBuffer)
 
